@@ -22,7 +22,6 @@ use OpenEMR\Modules\NewoAI\Services\NewoAIAvailableSlotsService;
 use OpenEMR\Modules\NewoAI\Services\NewoAIValidationException;
 use OpenEMR\RestControllers\RestControllerHelper;
 use OpenEMR\Validators\ProcessingResult;
-use Psr\Http\Message\ResponseInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -48,9 +47,10 @@ class NewoAIRestController
      * Handle GET /api/available_slots request.
      *
      * @param HttpRestRequest $request - HTTP request
-     * @return ResponseInterface - response
+     * @return array[] - response
      */
-    public function getAvailableSlots(HttpRestRequest $request): ResponseInterface
+    /** @phpstan-ignore-next-line */
+    public function getAvailableSlots(HttpRestRequest $request): array
     {
         $result = new ProcessingResult();
         try {
@@ -82,11 +82,14 @@ class NewoAIRestController
                     "oe-module-newo-ai",
                 );
                 /** @phpstan-ignore-next-line */
-                return RestControllerHelper::createProcessingResultResponse($request, $result);
+                return RestControllerHelper::handleProcessingResult($result, Response::HTTP_OK);
             } catch (NewoAIValidationException $e) {
                 $result->setValidationMessages($e->getErrors());
-                /** @phpstan-ignore-next-line */
-                return RestControllerHelper::createProcessingResultResponse($request, $result);
+                return RestControllerHelper::handleProcessingResult(
+                    $result,
+                    /** @phpstan-ignore-next-line */
+                    Response::HTTP_BAD_REQUEST
+                );
             }
         } catch (Throwable $e) {
             // Log the error event
@@ -104,9 +107,7 @@ class NewoAIRestController
             $errors[] = $e->getMessage();
             $result->setInternalErrors($errors);
             // Catch any exception or error and return 500 response
-            /** @phpstan-ignore-next-line */
-            return RestControllerHelper::createProcessingResultResponse(
-                $request,
+            return RestControllerHelper::handleProcessingResult(
                 $result,
                 /** @phpstan-ignore-next-line */
                 Response::HTTP_INTERNAL_SERVER_ERROR
