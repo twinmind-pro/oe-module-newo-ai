@@ -92,7 +92,7 @@ class Bootstrap
         );
         $apiController = new NewoAIRestController();
 
-        $event->addToRouteMap('GET /api/available_slots', [$apiController, 'availableSlots']);
+        $event->addToRouteMap('GET /api/available_slots', [$apiController, 'getAvailableSlots']);
         return $event;
     }
 
