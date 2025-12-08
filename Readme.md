@@ -21,7 +21,7 @@ Its primary purpose is to enable scheduling functionality by exposing a new REST
 
 ## 🔐 Authorization
 To access the endpoint, the authenticated user must have the scope:
-** user/available_slots.read **
+**user/available_slots.read**
 
 ## 📡 API Endpoint Details
 ### **Endpoint** GET /apis/default/api/available_slots
@@ -59,8 +59,8 @@ curl -X GET \
 ```
 ## 🛠 Installation
 
-**Prerequisites**:<\br>
-<\br> OpenEMR ≥ 7.0.3.4, PHP ≥ 8.2, Composer
+**Prerequisites**:</br>
+OpenEMR ≥ 7.0.3.4, PHP ≥ 8.2, Composer
 
 
 1. Clone the repository into your OpenEMR modules directory: </br>
@@ -69,10 +69,10 @@ curl -X GET \
     composer install --no-dev --classmap-authoritative --optimize-autoloader
     composer archive --format=zip --dir=build
     ```
-2. Unzip **build/twinmindpro-oe-newo-ai-1.0.0.zip** to folder **oe-module-newo-ai** and copy to OpenEMR custom modules directory </br>
+2. Unzip **build/twinmindpro-oe-newo-ai-<VERSION_NUMBER>.zip** to folder **oe-module-newo-ai** and copy to OpenEMR custom modules directory </br>
    <openemr_installation_directory>//interface/modules/custom_modules/.
 3. Log in OpenEMR as Administrator 
 4. In top menu chose **Modules** then **Manage Modules**
-5. Find under the **Custom Module Listings** module **Newo AI Integratopn Module v...**
+5. Find under the **Custom Module Listings** module **Newo AI Integration Module v<VERSION_NUMBER>**
 6. Click **Install** then **Enable**
-7. Create new API client with scope **`user/available_slots.read`**
+7. Create new API client with scope **user/available_slots.read**
