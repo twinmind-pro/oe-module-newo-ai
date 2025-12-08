@@ -42,3 +42,4 @@ coverage/
 # Build artifacts
 dist/
 /build/
+/coverage.xml
