@@ -1,0 +1,44 @@
+# PHP project .gitignore
+
+# Composer dependencies
+/vendor/
+composer.lock
+
+# Environment files
+.env
+.env.*
+
+# Cache and logs
+/cache/
+logs/
+*.log
+
+# IDE settings
+.idea/
+.vscode/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# PHPUnit cache
+.phpunit.result.cache
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# Generated files
+/public/storage
+/storage/*.key
+
+# Node modules (if using frontend)
+node_modules/
+
+# Coverage reports
+coverage/
+
+# Build artifacts
+dist/
+/build/
