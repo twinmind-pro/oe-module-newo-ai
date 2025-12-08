@@ -1,0 +1,63 @@
+{
+  "name": "twinmindpro/oe-newo-ai",
+  "version": "1.0.0",
+  "description": "OpenEMR Neow AI Integration Module",
+  "type": "openemr-module",
+  "license": "GPL-3.0",
+  "authors": [
+    {
+      "name": "Roman Morenko",
+      "email": "morenko83@gmail.com",
+      "role": "Developer"
+    }
+  ],
+  "keywords": ["openemr", "openemr-module"],
+  "minimum-stability": "stable",
+  "autoload": {
+    "psr-4": {"OpenEMR\\Modules\\NewoAI\\": "src/"}
+  },
+  "require": {
+    "openemr/oe-module-installer-plugin": "0.1.5",
+    "php": ">8.2",
+    "symfony/event-dispatcher": "6.4.25",
+    "nyholm/psr7": "1.8.2",
+    "ext-json": "8.5.0"
+  },
+
+  "repositories": [
+    {
+      "type": "package",
+      "package": {
+        "name": "openemr/openemr",
+        "version": "7.0.3.4",
+        "source": {
+          "url": "https://github.com/openemr/openemr.git",
+          "type": "git",
+          "reference": "v7_0_3_4"
+        }
+      }
+    }
+  ],
+
+  "require-dev": {
+    "openemr/openemr": "7.0.3.4",
+    "squizlabs/php_codesniffer": "^3.9",
+    "phpstan/phpstan": "^1.10",
+    "phpunit/phpunit": "^12.5",
+    "mockery/mockery": "^1.6"
+
+  },
+
+  "scripts": {
+    "lint": "phpcs --standard=PSR12 src",
+    "analyze": "phpstan analyse src --level=max"
+  },
+  "conflict": {
+    "openemr/openemr": ">8.0.0"
+  },
+  "config": {
+    "allow-plugins": {
+      "openemr/oe-module-installer-plugin": true
+    }
+  }
+}
