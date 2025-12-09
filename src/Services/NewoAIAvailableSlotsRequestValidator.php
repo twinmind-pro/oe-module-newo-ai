@@ -30,6 +30,23 @@ class NewoAIAvailableSlotsRequestValidator
         $dateFrom = DateTime::createFromFormat('Y-m-d', $params['date_from']);
         $dateTo = DateTime::createFromFormat('Y-m-d', $params['date_to']);
 
+        $duration = 15;
+        if (isset($params['duration_in_min']) && $params['duration_in_min'] !== '') {
+            $durationRaw = $params['duration_in_min'];
+            if (!ctype_digit($durationRaw)) {
+                $errors[] = "duration_in_min must be an integer.";
+            } else {
+                $duration = (int)$durationRaw;
+
+                if ($duration < 15) {
+                    $errors[] = "duration_in_min must be at least 15.";
+                }
+                if ($duration % 5 !== 0) {
+                    $errors[] = "duration_in_min must be a multiple of 5.";
+                }
+            }
+        }
+
         if (!$dateFrom) {
             $errors[] = "Invalid date format dateFrom: " . $params['date_from'] . " Expected 'YYYY-MM-DD'.";
         }
@@ -47,7 +64,8 @@ class NewoAIAvailableSlotsRequestValidator
                 $params['aid'],
                 $params['fid'],
                 $dateFrom,
-                $dateTo
+                $dateTo,
+                $duration,
             );
         }
         throw new NewoAIValidationException($errors);

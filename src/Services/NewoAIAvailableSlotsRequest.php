@@ -10,12 +10,14 @@ class NewoAIAvailableSlotsRequest
     public string $fid;
     public DateTime $dateFrom;
     public DateTime $dateTo;
+    public int $duration;
 
-    public function __construct(string $aid, string $fid, DateTime $dateFrom, DateTime $dateTo)
+    public function __construct(string $aid, string $fid, DateTime $dateFrom, DateTime $dateTo, int $duration = 15)
     {
         $this->aid = $aid;
         $this->fid = $fid;
         $this->dateFrom = $dateFrom;
         $this->dateTo = $dateTo;
+        $this->duration = $duration;
     }
 }

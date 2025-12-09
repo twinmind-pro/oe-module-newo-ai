@@ -15,18 +15,18 @@ use OpenEMR\Modules\NewoAI\Resources\NewoAIAvailableSlotsResource;
 class NewoAIAvailableSlotsService
 {
     private const string TABLE_EVENTS = 'openemr_postcalendar_events';
+    private const int CATEGORY_FREE  = 2;
 
     /**
      * Get available slots for a provider in a facility within a date range.
      *
      * @param NewoAIAvailableSlotsRequest $request
      * @return NewoAIAvailableSlotsResource[]
-     * @throws DateMalformedStringException | DateError
+     * @throws DateMalformedStringException|DateError|SqlQueryException
      * @noinspection PhpMultipleClassDeclarationsInspection
      */
     public function getAvailableSlots(NewoAIAvailableSlotsRequest $request): array
     {
-
         $sql = sprintf(
             "SELECT pc_eventDate, pc_startTime, pc_endTime, pc_catid
              FROM %s
@@ -36,7 +36,6 @@ class NewoAIAvailableSlotsService
              ORDER BY pc_eventDate, pc_startTime",
             self::TABLE_EVENTS
         );
-
 
         $binds = [
             $request->aid,
@@ -60,7 +59,12 @@ class NewoAIAvailableSlotsService
                 $event['pc_eventDate'] . ' ' . $event['pc_endTime']
             );
 
-            if ((int)$event['pc_catid'] === 2) {
+            // Если парсинг не удался — считаем это ошибкой формата данных
+            if (!$start || !$end) {
+                throw new DateMalformedStringException("Invalid event time format for date: {$event['pc_eventDate']}");
+            }
+
+            if ((int)$event['pc_catid'] === self::CATEGORY_FREE) {
                 $freeSlots[$event['pc_eventDate']][] = ['start' => $start, 'end' => $end];
             } else {
                 $busySlots[$event['pc_eventDate']][] = ['start' => $start, 'end' => $end];
@@ -69,39 +73,57 @@ class NewoAIAvailableSlotsService
 
         $availableSlots = [];
 
+        // Обрабатываем каждый день свободных интервалов
         foreach ($freeSlots as $date => $slots) {
-            $slot_date = DateTime::createFromFormat('Y-m-d', $date);
-            if (!$slot_date) {
-                throw new DateError("Invalid date format: " . $date);
+            $slotDate = DateTime::createFromFormat('Y-m-d', $date);
+            if (!$slotDate) {
+                throw new DateError("Invalid date format: $date");
             }
-            $resource = new NewoAIAvailableSlotsResource($slot_date, []);
+
+            // Отсортируем busy-интервалы по времени начала
+            if (!empty($busySlots[$date])) {
+                usort($busySlots[$date], function ($a, $b) {
+                    return $a['start']->getTimestamp() <=> $b['start']->getTimestamp();
+                });
+            }
+
+            $resource = new NewoAIAvailableSlotsResource($slotDate, []);
+
             foreach ($slots as $slot) {
                 $start = $slot['start'];
-                $end = $slot['end'];
+                $end   = $slot['end'];
 
                 if (!empty($busySlots[$date])) {
                     foreach ($busySlots[$date] as $busy) {
-                        // If busy interval overlaps with free interval
-                        if ($busy['start'] < $end && $busy['end'] > $start) {
-                            // Add part before busy interval
-                            if ($start < $busy['start'] && $resource->getSlots() !== null) {
+                        $busyStartTs = $busy['start']->getTimestamp();
+                        $busyEndTs   = $busy['end']->getTimestamp();
+                        $startTs     = $start->getTimestamp();
+                        $endTs       = $end->getTimestamp();
+
+                        if ($busyStartTs < $endTs && $busyEndTs > $startTs) {
+                            if ($startTs < $busyStartTs && $resource->getSlots() !== null) {
                                 $resource->setSlots(
-                                    /** @phpstan-ignore-next-line */
+                                /** @phpstan-ignore-next-line */
                                     array_merge(
                                         $resource->getSlots(),
-                                        $this->splitIntoSlots($start, $busy['start'])
+                                        $this->splitIntoSlots($start, $busy['start'], $request->duration)
                                     )
                                 );
                             }
-                            // Move start after busy interval
                             $start = $busy['end'];
                         }
                     }
                 }
 
-                if ($start < $end) {
-                    /** @phpstan-ignore-next-line */
-                    $resource->setSlots(array_merge($resource->getSlots(), $this->splitIntoSlots($start, $end)));
+
+                if ($start->getTimestamp() < $end->getTimestamp()) {
+                    $resource->setSlots(
+                        array_merge(
+                            /** @phpstan-ignore-next-line */
+                            $resource->getSlots(),
+                            $this->splitIntoSlots($start, $end, $request->duration)
+                        )
+                    );
                 }
             }
 
@@ -114,32 +136,33 @@ class NewoAIAvailableSlotsService
     }
 
     /**
-     * Split a time interval into 15-minute slots.
+     * Split a time interval into slots of given duration (minutes).
      *
      * @param DateTime|false $start Start time
-     * @param DateTime|false $end End time
+     * @param DateTime|false $end   End time
+     * @param int            $duration Slot size in minutes (>=15, multiple of 5)
      * @return NewoAIAvailableSlotResource[]
-     * @throws SqlQueryException | DateMalformedStringException
+     * @throws DateMalformedStringException
      * @noinspection PhpMultipleClassDeclarationsInspection
      */
-    private function splitIntoSlots(DateTime|false $start, DateTime|false $end): array
+    private function splitIntoSlots(DateTime|false $start, DateTime|false $end, int $duration): array
     {
         if (!$start) {
-            throw new DateMalformedStringException("Invalid date format: " . $start);
+            throw new DateMalformedStringException("Invalid date format in 'start' argument.");
         }
         if (!$end) {
-            throw new DateMalformedStringException("Invalid date format: " . $end);
+            throw new DateMalformedStringException("Invalid date format in 'end' argument.");
         }
-        $slots = [];
+
+        $slots   = [];
         $current = clone $start;
 
-        while ($current < $end) {
-            $next = (clone $current)->modify("+15 minutes");
-            if ($next > $end) {
+        while ($current->getTimestamp() < $end->getTimestamp()) {
+            $next = (clone $current)->modify("+$duration minutes");
+            if ($next->getTimestamp() > $end->getTimestamp()) {
                 break;
             }
-            $slot = new NewoAIAvailableSlotResource(clone $current, clone $next);
-            $slots[] = $slot;
+            $slots[] = new NewoAIAvailableSlotResource(clone $current, clone $next);
             $current = $next;
         }
 

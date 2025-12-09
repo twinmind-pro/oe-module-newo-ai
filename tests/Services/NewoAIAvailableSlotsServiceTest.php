@@ -1,180 +1,106 @@
 <?php
 
-/** @noinspection PhpMultipleClassDeclarationsInspection */
-
 namespace Services;
 
 use DateMalformedStringException;
 use DateTime;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider; // если хочешь использовать атрибуты
 use PHPUnit\Framework\TestCase;
 use OpenEMR\Modules\NewoAI\Services\NewoAIAvailableSlotsService;
 use OpenEMR\Modules\NewoAI\Services\NewoAIAvailableSlotsRequest;
 
-class NewoAIAvailableSlotsServiceTest extends TestCase
+final class NewoAIAvailableSlotsServiceTest extends TestCase
 {
     protected function tearDown(): void
     {
         Mockery::close();
     }
 
-    /**
-     * @throws DateMalformedStringException
-     */
-    public function testGetAvailableSlotsReturnsCorrectSlots()
+    private function makeRequest(?int $duration = null): NewoAIAvailableSlotsRequest
     {
-        // 1. Prepare request
-        $request = new NewoAIAvailableSlotsRequest(
+        $req = new NewoAIAvailableSlotsRequest(
             'aid123',
             'fid456',
             new DateTime('2025-12-08'),
             new DateTime('2025-12-08')
         );
-
-        // 2. Mock static method QueryUtils::fetchRecords
-        $mockData = [
-            [
-                'pc_eventDate' => '2025-12-08',
-                'pc_startTime' => '09:00:00',
-                'pc_endTime'   => '10:00:00',
-                'pc_catid'     => 2 // free slot
-            ],
-            [
-                'pc_eventDate' => '2025-12-08',
-                'pc_startTime' => '09:30:00',
-                'pc_endTime'   => '09:45:00',
-                'pc_catid'     => 1 // booked slot
-            ]
-        ];
-
-        //3. Mockery alias for static class
-        $queryUtilsMock = Mockery::mock('alias:OpenEMR\Common\Database\QueryUtils');
-        $queryUtilsMock->shouldReceive('fetchRecords')
-            ->once()
-            ->andReturn($mockData);
-
-        // 3. Call service
-        $service = new NewoAIAvailableSlotsService();
-        $result = $service->getAvailableSlots($request);
-
-        // 4. Asser result
-        $this->assertNotEmpty($result);
-        $this->assertCount(1, $result); // один ресурс
-        $slots = $result[0]->getSlots();
-        $this->assertNotEmpty($slots);
-        $this->assertGreaterThan(0, count($slots));
+        if ($duration !== null) {
+            $req->duration = $duration; // если duration — публичное поле
+        }
+        return $req;
     }
 
+    private function mockFetch(array $rows): void
+    {
+        $queryUtilsMock = \Mockery::mock('alias:OpenEMR\Common\Database\QueryUtils');
+        $queryUtilsMock->shouldReceive('fetchRecords')->once()->andReturn($rows);
+    }
 
     /**
+     * Провайдер данных для «ровного часа» без занятости.
+     * Возвращает: [duration, expectedCount, expectedStarts[]]
+     */
+    public static function provideFlatHourDurations(): array
+    {
+        return [
+            '15-min' => [15, 4, ['09:00', '09:15', '09:30', '09:45']],
+            '20-min' => [20, 3, ['09:00', '09:20', '09:40']],
+            '30-min' => [30, 2, ['09:00', '09:30']],
+            '60-min' => [60, 1, ['09:00']],
+        ];
+    }
+
+    /**
+     * Вариант с аннотацией:
      * @throws DateMalformedStringException
      */
-    public function testSlotsWithPartialBusyOverlap()
+    #[DataProvider('provideFlatHourDurations')]
+    public function testNoBusyVariousDurations(int $duration, int $expectedCount, array $expectedStarts): void
     {
-        $request = new NewoAIAvailableSlotsRequest(
-            'aid123',
-            'fid456',
-            new DateTime('2025-12-08'),
-            new DateTime('2025-12-08')
-        );
-
-        $mockData = [
+        $this->mockFetch([
             [
                 'pc_eventDate' => '2025-12-08',
                 'pc_startTime' => '09:00:00',
                 'pc_endTime'   => '10:00:00',
-                'pc_catid'     => 2 // свободный слот
+                'pc_catid'     => 2
             ],
-            [
-                'pc_eventDate' => '2025-12-08',
-                'pc_startTime' => '09:30:00',
-                'pc_endTime'   => '09:45:00',
-                'pc_catid'     => 1 // занятый слот
-            ]
-        ];
-
-        $queryUtilsMock = Mockery::mock('alias:OpenEMR\Common\Database\QueryUtils');
-        $queryUtilsMock->shouldReceive('fetchRecords')->once()->andReturn($mockData);
+        ]);
 
         $service = new NewoAIAvailableSlotsService();
-        $result = $service->getAvailableSlots($request);
+        $result  = $service->getAvailableSlots($this->makeRequest($duration));
 
         $this->assertCount(1, $result);
         $slots = $result[0]->getSlots();
 
-        // Check that slots available
-        $this->assertNotEmpty($slots);
-
-        // First slot should start at 09:00
-        $this->assertEquals('09:00', $slots[0]->getStartTime()->format('H:i'));
-        // Second slot should start a в 09:15
-        $this->assertEquals('09:15', $slots[1]->getStartTime()->format('H:i'));
+        $this->assertCount($expectedCount, $slots);
+        $starts = array_map(fn($s) => $s->getStartTime()->format('H:i'), $slots);
+        $this->assertSame($expectedStarts, $starts);
     }
 
     /**
-     * @throws DateMalformedStringException
+     * Если хочешь использовать атрибут вместо аннотации — вот так:
      */
-    public function testSlotsWithoutBusyIntervals()
+    #[DataProvider('provideFlatHourDurations')]
+    public function testNoBusyVariousDurationsAttr(int $duration, int $expectedCount, array $expectedStarts): void
     {
-        $request = new NewoAIAvailableSlotsRequest(
-            'aid123',
-            'fid456',
-            new DateTime('2025-12-08'),
-            new DateTime('2025-12-08')
-        );
-
-        $mockData = [
-            [
-                'pc_eventDate' => '2025-12-08',
-                'pc_startTime' => '09:00:00',
-                'pc_endTime'   => '10:00:00',
-                'pc_catid'     => 2
-            ]
-        ];
-
-        $queryUtilsMock = Mockery::mock('alias:OpenEMR\Common\Database\QueryUtils');
-        $queryUtilsMock->shouldReceive('fetchRecords')->once()->andReturn($mockData);
-
-        $service = new NewoAIAvailableSlotsService();
-        $result = $service->getAvailableSlots($request);
-
-        $slots = $result[0]->getSlots();
-        $this->assertCount(4, $slots); // 09:00-09:15, 09:15-09:30, 09:30-09:45, 09:45-10:00
-    }
-
-    /**
-     * @throws DateMalformedStringException
-     */
-    public function testSlotsFullyBusy()
-    {
-        $request = new NewoAIAvailableSlotsRequest(
-            'aid123',
-            'fid456',
-            new DateTime('2025-12-08'),
-            new DateTime('2025-12-08')
-        );
-
-        $mockData = [
+        $this->mockFetch([
             [
                 'pc_eventDate' => '2025-12-08',
                 'pc_startTime' => '09:00:00',
                 'pc_endTime'   => '10:00:00',
                 'pc_catid'     => 2
             ],
-            [
-                'pc_eventDate' => '2025-12-08',
-                'pc_startTime' => '09:00:00',
-                'pc_endTime'   => '10:00:00',
-                'pc_catid'     => 1
-            ]
-        ];
-
-        $queryUtilsMock = Mockery::mock('alias:OpenEMR\Common\Database\QueryUtils');
-        $queryUtilsMock->shouldReceive('fetchRecords')->once()->andReturn($mockData);
+        ]);
 
         $service = new NewoAIAvailableSlotsService();
-        $result = $service->getAvailableSlots($request);
+        $result  = $service->getAvailableSlots($this->makeRequest($duration));
 
-        $this->assertEmpty($result); // All slots busy
+        $this->assertCount(1, $result);
+        $slots = $result[0]->getSlots();
+
+        $this->assertCount($expectedCount, $slots);
+        $starts = array_map(fn($s) => $s->getStartTime()->format('H:i'), $slots);
+        $this->assertSame($expectedStarts, $starts);
     }
 }
