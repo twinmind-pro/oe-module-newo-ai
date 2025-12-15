@@ -9,12 +9,12 @@ class NewoAIAvailableSlotsResource implements JsonSerializable
 {
     private ?DateTime $date;
 
-    /** @var NewoAIAvailableSlotsResource[]|null */
+    /** @var NewoAIAvailableSlotResource[]|null */
     private array|null $slots;
 
     /**
      * @param DateTime|null $date
-     * @param NewoAIAvailableSlotsResource[]|null $slots
+     * @param NewoAIAvailableSlotResource[]|null $slots
      */
     public function __construct(?DateTime $date, ?array $slots)
     {
