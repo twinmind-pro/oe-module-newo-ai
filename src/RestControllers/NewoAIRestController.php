@@ -82,7 +82,11 @@ class NewoAIRestController
                     "oe-module-newo-ai",
                 );
                 /** @phpstan-ignore-next-line */
-                return RestControllerHelper::handleProcessingResult($result, Response::HTTP_OK);
+                return RestControllerHelper::handleProcessingResult(
+                    $result,
+                    Response::HTTP_OK,
+                    true
+                );
             } catch (NewoAIValidationException $e) {
                 $result->setValidationMessages($e->getErrors());
                 return RestControllerHelper::handleProcessingResult(
