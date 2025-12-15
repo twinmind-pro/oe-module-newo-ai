@@ -1,1 +1,1 @@
-Newo AI Integration Module v1.0.2
+Newo AI Integration Module v1.0.3

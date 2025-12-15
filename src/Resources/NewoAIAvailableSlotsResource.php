@@ -9,12 +9,12 @@ class NewoAIAvailableSlotsResource implements JsonSerializable
 {
     private ?DateTime $date;
 
-    /** @var NewoAIAvailableSlotsResource[]|null */
+    /** @var NewoAIAvailableSlotResource[]|null */
     private array|null $slots;
 
     /**
      * @param DateTime|null $date
-     * @param NewoAIAvailableSlotsResource[]|null $slots
+     * @param NewoAIAvailableSlotResource[]|null $slots
      */
     public function __construct(?DateTime $date, ?array $slots)
     {
@@ -33,7 +33,7 @@ class NewoAIAvailableSlotsResource implements JsonSerializable
     }
 
     /**
-     * @return NewoAIAvailableSlotsResource[]|null
+     * @return NewoAIAvailableSlotResource[]|null
      */
     public function getSlots(): ?array
     {
@@ -41,7 +41,7 @@ class NewoAIAvailableSlotsResource implements JsonSerializable
     }
 
     /**
-     * @param NewoAIAvailableSlotsResource[]|null $slots
+     * @param NewoAIAvailableSlotResource[]|null $slots
      * @return void
      */
     public function setSlots(?array $slots): void
@@ -50,7 +50,7 @@ class NewoAIAvailableSlotsResource implements JsonSerializable
     }
 
     /**
-     * @return array<string, string | NewoAIAvailableSlotsResource[]>
+     * @return array<string, string | NewoAIAvailableSlotResource[]>
      */
     public function jsonSerialize(): array
     {
