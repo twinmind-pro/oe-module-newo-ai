@@ -21,7 +21,8 @@
     "php": ">8.2",
     "symfony/event-dispatcher": "6.4.25",
     "nyholm/psr7": "1.8.2",
-    "ext-json": "8.5.0"
+    "ext-json": "8.5.0",
+    "symfony/http-foundation": "^8.0"
   },
 
   "repositories": [

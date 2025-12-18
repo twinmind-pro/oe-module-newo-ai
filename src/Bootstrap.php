@@ -93,6 +93,7 @@ class Bootstrap
         $apiController = new NewoAIRestController();
 
         $event->addToRouteMap('GET /api/available_slots', [$apiController, 'getAvailableSlots']);
+        $event->addToRouteMap('GET /api/patient_by_phone', [$apiController, 'patientByPhone']);
         return $event;
     }
 
@@ -111,6 +112,8 @@ class Bootstrap
         $scopes = $event->getScopes();
         /** @phpstan-ignore-next-line */
         $scopes[] = 'user/available_slots.read';
+        /** @phpstan-ignore-next-line */
+        $scopes[] = 'user/patient_by_phone.read';
         $event->setScopes($scopes);
         return $event;
     }

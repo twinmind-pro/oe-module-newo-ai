@@ -21,6 +21,9 @@ use OpenEMR\Modules\NewoAI\Services\NewoAIAvailableSlotsRequestValidator;
 use OpenEMR\Modules\NewoAI\Services\NewoAIAvailableSlotsService;
 use OpenEMR\Modules\NewoAI\Services\NewoAIValidationException;
 use OpenEMR\RestControllers\RestControllerHelper;
+use OpenEMR\Services\PatientService;
+use OpenEMR\Services\Search\SearchModifier;
+use OpenEMR\Services\Search\StringSearchField;
 use OpenEMR\Validators\ProcessingResult;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -33,6 +36,11 @@ class NewoAIRestController
     private NewoAIAvailableSlotsService $newoAIAvailableSlotsService;
     private NewoAIAvailableSlotsRequestValidator $validator;
 
+    /**
+     * @var PatientService
+     */
+    private PatientService $patientService;
+
 
 
 
@@ -40,6 +48,7 @@ class NewoAIRestController
     {
         $this->newoAIAvailableSlotsService = new NewoAIAvailableSlotsService();
         $this->validator = new NewoAIAvailableSlotsRequestValidator();
+        $this->patientService = new PatientService();
     }
 
 
@@ -49,7 +58,9 @@ class NewoAIRestController
      * @param HttpRestRequest $request - HTTP request
      * @return array[] - response
      */
-    /** @phpstan-ignore-next-line */
+    /** @phpstan-ignore-next-line
+     * @noinspection PhpUndefinedMethodInspection
+     */
     public function getAvailableSlots(HttpRestRequest $request): array
     {
         $result = new ProcessingResult();
@@ -84,7 +95,6 @@ class NewoAIRestController
 
                 return RestControllerHelper::handleProcessingResult(
                     $result,
-                    /** @phpstan-ignore-next-line */
                     Response::HTTP_OK,
                     true
                 );
@@ -92,7 +102,6 @@ class NewoAIRestController
                 $result->setValidationMessages($e->getErrors());
                 return RestControllerHelper::handleProcessingResult(
                     $result,
-                    /** @phpstan-ignore-next-line */
                     Response::HTTP_BAD_REQUEST
                 );
             }
@@ -114,8 +123,72 @@ class NewoAIRestController
             // Catch any exception or error and return 500 response
             return RestControllerHelper::handleProcessingResult(
                 $result,
-                /** @phpstan-ignore-next-line */
-                Response::HTTP_INTERNAL_SERVER_ERROR
+                Response::HTTP_INTERNAL_SERVER_ERROR,
+                true
+            );
+        }
+    }
+
+    /**
+     * Handle GET /api/patient_by_phone request.
+     *
+     * @param HttpRestRequest $request - HTTP request
+     * @return array[] - response
+     */
+    /** @phpstan-ignore-next-line
+     * @noinspection PhpUndefinedMethodInspection
+     */
+    public function patientByPhone(HttpRestRequest $request): array
+    {
+        try {
+            $queryParams = $request->getQueryParams();
+            $phone = $queryParams['phone'] ?? null;
+            $querySearch = [];
+            if (!empty($phone)) {
+                $querySearch["phone_contact"] = new StringSearchField(
+                    "phone_contact",
+                    $phone
+                );
+                $querySearch["phone_cell"] = new StringSearchField(
+                    "phone_cell",
+                    $phone
+                );
+                $querySearch["phone_home"] = new StringSearchField(
+                    "phone_home",
+                    $phone
+                );
+                $querySearch["phone_biz"] = new StringSearchField(
+                    "phone_biz",
+                    $phone
+                );
+            }
+            $result = $this->patientService->search($querySearch, false);
+            return RestControllerHelper::handleProcessingResult(
+                $result,
+                Response::HTTP_OK,
+                true
+            );
+        } catch (Throwable $e) {
+            $result = new ProcessingResult();
+            // Log the error event
+            /** @phpstan-ignore-next-line */
+            EventAuditLogger::instance()->newEvent(
+                'api',
+                $_SESSION['authUser'] ?? 'system',
+                $_SESSION['authProvider'] ?? '',
+                0,
+                '/api/patient_by_phone error:  ' . $e->getMessage() . ':' . $e->getTraceAsString(),
+                null,
+                "oe-module-newo-ai",
+            );
+            $errors = [];
+            $errors[] = $e->getMessage();
+            $result->setInternalErrors($errors);
+            // Catch any exception or error and return 500 response
+            return RestControllerHelper::handleProcessingResult(
+                $result,
+                Response::HTTP_INTERNAL_SERVER_ERROR,
+                true
             );
         }
     }
