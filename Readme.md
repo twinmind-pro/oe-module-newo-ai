@@ -20,9 +20,7 @@ Its primary purpose is to enable scheduling functionality by exposing a new REST
 2.Adds a new REST API endpoint:
   **`GET /apis/default/api/patient_by_phone`**
 - Allows search patients by phone :
-    - **Phone** (`aid`)
-    - **Facility** (`fid`)
-    - **Date range** (`date_from`, `date_to`)
+    - **Phone** (`phone`)
 - Implements strict validation and returns structured JSON responses.
 - Requires a new OAuth scope:  
   **`user/patient_by_phone.read`**
