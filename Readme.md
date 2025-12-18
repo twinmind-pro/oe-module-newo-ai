@@ -7,7 +7,7 @@ Its primary purpose is to enable scheduling functionality by exposing a new REST
 ---
 
 ## 🚀 Features
-- Adds a new REST API endpoint:  
+1.Adds a new REST API endpoint:  
   **`GET /apis/default/api/available_slots`**
 - Allows clients to query available slots for:
     - **Provider** (`aid`)
@@ -17,6 +17,15 @@ Its primary purpose is to enable scheduling functionality by exposing a new REST
 - Requires a new OAuth scope:  
   **`user/available_slots.read`**
 
+2.Adds a new REST API endpoint:
+  **`GET /apis/default/api/patient_by_phone`**
+- Allows search patients by phone :
+    - **Phone** (`aid`)
+    - **Facility** (`fid`)
+    - **Date range** (`date_from`, `date_to`)
+- Implements strict validation and returns structured JSON responses.
+- Requires a new OAuth scope:  
+  **`user/patient_by_phone.read`**
 ---
 
 ## 🔐 Authorization
