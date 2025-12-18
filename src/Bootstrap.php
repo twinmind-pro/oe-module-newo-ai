@@ -112,6 +112,7 @@ class Bootstrap
         $scopes = $event->getScopes();
         /** @phpstan-ignore-next-line */
         $scopes[] = 'user/available_slots.read';
+        /** @phpstan-ignore-next-line */
         $scopes[] = 'user/patient_by_phone.read';
         $event->setScopes($scopes);
         return $event;
